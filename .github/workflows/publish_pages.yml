@@ -1,0 +1,87 @@
+name: Publish Dacota Radio Pages
+
+on:
+  push:
+    branches: [ main, master ]
+ # workflow_dispatch:
+ # schedule:
+    # Run daily at 2 AM UTC to refresh data
+ #   - cron: '0 2 * * *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0  # Fetch full history for accurate commit dates
+    
+    - name: Setup FFmpeg
+      uses: FedericoCarboni/setup-ffmpeg@v3
+      with:
+        ffmpeg-version: release
+    
+    - name: Configure Git Identity
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "Dacota Radio Publisher"
+    
+    - name: Make script executable
+      run: chmod +x ./.github/workflows/publish-pages.sh
+    
+    - name: Run Dacota Radio Publisher
+      run: ./.github/workflows/publish-pages.sh
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      if: success()
+    
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      if: success()
+      with:
+        path: './site'
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+      if: success()
+    
+    - name: Update repository with changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Only commit if there are changes
+        if [ -n "$(git status --porcelain)" ]; then
+          git add site/
+          git commit -m "🚀 Auto-update Dacota Radio Pages - $(date -u '+%Y-%m-%d %H:%M:%S UTC')" || exit 0
+          git push
+        else
+          echo "No changes to commit"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optional: Notify on completion
+#  notify:
+ #   runs-on: ubuntu-latest
+  #  needs: publish
+  #  if: always()
+   # steps:
+    #- name: Notify completion
+     # run: |
+      #  if [ "${{ needs.publish.result }}" == "success" ]; then
+       #   echo "✅ Dacota Radio Pages successfully published!"
+        #  echo "🌐 Site URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+       # else
+        #  echo "❌ Dacota Radio Pages publication failed"
+        #fi
