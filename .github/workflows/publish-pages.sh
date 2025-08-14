@@ -748,7 +748,7 @@ setup_github_pages() {
     if git diff --staged --quiet; then
         echo "ℹ️ No changes to commit"
     else
-        git commit -m "🚀 Update Jri Radio GitHub Pages site
+        git commit -m "🚀 Update Dacota Radio GitHub Pages site
         
 - Updated file count: $(cat $FILECOUNT_FILE) files
 - Refreshed metadata for all tracks
