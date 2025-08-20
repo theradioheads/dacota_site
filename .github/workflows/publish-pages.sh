@@ -602,7 +602,7 @@ create_radio_html() {
                     const repoUrl = window.location.hostname.includes('github.io') ? 
                         window.location.hostname.replace('.github.io', '') : 'Jri-creator/jri_site';
                     
-                    this.audioPlayer.src = `https://raw.githubusercontent.com/Jri-creator/jri_site/refs/heads/main/${track.filename}`;
+                    this.audioPlayer.src = `https://raw.githubusercontent.com/theradioheads/dacota_site/refs/heads/main/${track.filename}`;
                     this.audioPlayer.load();
                     
                     console.log(`Audio source set to: ${this.audioPlayer.src}`);
@@ -1398,7 +1398,7 @@ create_player_html() {
                             const repoUrl = window.location.hostname.includes('github.io') ? 
                                 window.location.hostname.replace('.github.io', '') : 'Jri-creator/jri_site';
                             
-                            const audioUrl = `https://raw.githubusercontent.com/Jri-creator/jri_site/refs/heads/main/${parts[0]}`;
+                            const audioUrl = `https://raw.githubusercontent.com/theradioheads/dacota_site/refs/heads/main/${parts[0]}`;
                             
                             this.tracks.push({
                                 filename: audioUrl,
