@@ -6,17 +6,17 @@
     <title>Dacota Radio</title>
     <style>
         :root {
-            --bg-color: #74b9ff;
+            --bg-color: #f84c4c;
             --container-bg: #fff;
             --text-color: #333;
             --secondary-text: #777;
             --light-text: #999;
-            --play-button-bg: #4CAF50;
-            --play-button-hover: #45a049;
-            --next-button-bg: #2196F3;
-            --next-button-hover: #0b7dda;
+            --play-button-bg: #f84c4c;
+            --play-button-hover: #d34141;
+            --next-button-bg: #f84c4c;
+            --next-button-hover: #d34141;
             --progress-bg: #ddd;
-            --progress-fill: #4CAF50;
+            --progress-fill: #d34141;
             --shadow-color: rgba(0, 0, 0, 0.1);
             --error-bg: #ffebee;
             --error-border: #f44336;
@@ -24,21 +24,21 @@
         }
         
         body.dark-mode {
-            --bg-color: #003060;
-            --container-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --secondary-text: #b0b0b0;
-            --light-text: #909090;
-            --play-button-bg: #388e3c;
-            --play-button-hover: #2e7d32;
-            --next-button-bg: #1976d2;
-            --next-button-hover: #1565c0;
-            --progress-bg: #424242;
-            --progress-fill: #4CAF50;
-            --shadow-color: rgba(0, 0, 0, 0.3);
-            --error-bg: #2d1b1b;
-            --error-border: #d32f2f;
-            --error-text: #ef5350;
+            --bg-color: #963131;
+            --container-bg: #5f5f5f;
+            --text-color: #ffffff;
+            --secondary-text: #ffffff;
+            --light-text: #ffffff;
+            --play-button-bg: #f84c4c;
+            --play-button-hover: #d34141;
+            --next-button-bg: #f84c4c;
+            --next-button-hover: #d34141;
+            --progress-bg: #ddd;
+            --progress-fill: #d34141;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --error-bg: #ffebee;
+            --error-border: #f44336;
+            --error-text: #c62828;
         }
         
         body {
@@ -213,6 +213,19 @@
             margin: 20px 0;
         }
         
+        .player-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .player-link:hover {
+            text-decoration: underline;
+        }
+        
         #audio-player {
             display: none;
         }
@@ -262,11 +275,13 @@
                     <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
                 </div>
             </div>
+            
+            <a href="player.html" class="player-link">Open Full Music Player →</a>
         </div>
     </div>
 
     <script>
-        // GitHub Pages optimized version of Dacota Radio
+        // GitHub Pages optimized version of Jri Radio
         class JriRadioPlayer {
             constructor() {
                 this.audioPlayer = document.getElementById('audio-player');
@@ -450,7 +465,7 @@
                     const repoUrl = window.location.hostname.includes('github.io') ? 
                         window.location.hostname.replace('.github.io', '') : 'Jri-creator/jri_site';
                     
-                    this.audioPlayer.src = `https://raw.githubusercontent.com/Jri-creator/dacota_site/refs/heads/main/${track.filename}`;
+                    this.audioPlayer.src = `https://raw.githubusercontent.com/Jri-creator/jri_site/refs/heads/main/${track.filename}`;
                     this.audioPlayer.load();
                     
                     console.log(`Audio source set to: ${this.audioPlayer.src}`);
