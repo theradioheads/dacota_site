@@ -3,42 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dacota Radio</title>
+    <title>Jri Radio</title>
     <style>
         :root {
-            --bg-color: #f84c4c;
+            --bg-color: #74b9ff;
             --container-bg: #fff;
             --text-color: #333;
             --secondary-text: #777;
             --light-text: #999;
-            --play-button-bg: #f84c4c;
-            --play-button-hover: #d34141;
-            --next-button-bg: #f84c4c;
-            --next-button-hover: #d34141;
+            --play-button-bg: #4CAF50;
+            --play-button-hover: #45a049;
+            --next-button-bg: #2196F3;
+            --next-button-hover: #0b7dda;
             --progress-bg: #ddd;
-            --progress-fill: #d34141;
+            --progress-fill: #4CAF50;
             --shadow-color: rgba(0, 0, 0, 0.1);
             --error-bg: #ffebee;
             --error-border: #f44336;
             --error-text: #c62828;
+            --artist-controller-bg: #f8f9fa;
+            --artist-controller-border: #e9ecef;
         }
         
         body.dark-mode {
-            --bg-color: #963131;
-            --container-bg: #5f5f5f;
-            --text-color: #ffffff;
-            --secondary-text: #ffffff;
-            --light-text: #ffffff;
-            --play-button-bg: #f84c4c;
-            --play-button-hover: #d34141;
-            --next-button-bg: #f84c4c;
-            --next-button-hover: #d34141;
-            --progress-bg: #ddd;
-            --progress-fill: #d34141;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-            --error-bg: #ffebee;
-            --error-border: #f44336;
-            --error-text: #c62828;
+            --bg-color: #003060;
+            --container-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --secondary-text: #b0b0b0;
+            --light-text: #909090;
+            --play-button-bg: #388e3c;
+            --play-button-hover: #2e7d32;
+            --next-button-bg: #1976d2;
+            --next-button-hover: #1565c0;
+            --progress-bg: #424242;
+            --progress-fill: #4CAF50;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --error-bg: #2d1b1b;
+            --error-border: #d32f2f;
+            --error-text: #ef5350;
+            --artist-controller-bg: #2a2a2a;
+            --artist-controller-border: #404040;
         }
         
         body {
@@ -106,7 +110,7 @@
             gap: 10px;
         }
         
-        .play-button, .next-button {
+        .play-button, .next-button, .artist-controller-toggle {
             color: white;
             border: none;
             padding: 10px 20px;
@@ -122,7 +126,7 @@
             min-width: 100px;
         }
         
-        .next-button {
+        .next-button, .artist-controller-toggle {
             background-color: var(--next-button-bg);
         }
         
@@ -130,7 +134,7 @@
             background-color: var(--play-button-hover);
         }
         
-        .next-button:hover {
+        .next-button:hover, .artist-controller-toggle:hover {
             background-color: var(--next-button-hover);
         }
         
@@ -226,16 +230,132 @@
             text-decoration: underline;
         }
         
+        .artist-controller {
+            background-color: var(--artist-controller-bg);
+            border: 1px solid var(--artist-controller-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .artist-controller.show {
+            display: block;
+        }
+        
+        .artist-controller h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .artist-controller-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .select-all-btn, .select-none-btn {
+            background: var(--secondary-text);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .select-all-btn:hover, .select-none-btn:hover {
+            background: var(--text-color);
+        }
+        
+        .artist-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--artist-controller-border);
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .artist-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .artist-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        body.dark-mode .artist-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .artist-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .artist-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .artist-track-count {
+            color: var(--secondary-text);
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
         #audio-player {
             display: none;
+        }
+        
+        @media (max-width: 600px) {
+            .track-info {
+                flex-direction: column;
+            }
+            
+            .cover-art {
+                margin-right: 0;
+                margin-bottom: 15px;
+                align-self: center;
+            }
+            
+            .artist-list {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Dacota Radio</h1>
+        <h1>Jri Radio</h1>
         <div class="header-controls">
             <button id="theme-toggle" class="theme-toggle">Dark Mode</button>
+        </div>
+    </div>
+    
+    <div class="artist-controller" id="artist-controller">
+        <h3>
+            Artist Controller
+            <span class="artist-track-count" id="enabled-count">All artists enabled</span>
+        </h3>
+        <div class="artist-controller-actions">
+            <button class="select-all-btn" id="select-all-btn">Select All</button>
+            <button class="select-none-btn" id="select-none-btn">Select None</button>
+        </div>
+        <div class="artist-list" id="artist-list">
+            <!-- Artists will be populated here -->
         </div>
     </div>
     
@@ -271,6 +391,7 @@
             <div class="controls">
                 <button class="play-button" id="play-button">Play</button>
                 <button class="next-button" id="next-button">Next Track</button>
+                <button class="artist-controller-toggle" id="artist-controller-toggle">Artist Filter</button>
                 <div class="volume-control">
                     <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
                 </div>
@@ -281,12 +402,18 @@
     </div>
 
     <script>
-        // GitHub Pages optimized version of Jri Radio
+        // GitHub Pages optimized version of Jri Radio with Artist Controller
         class JriRadioPlayer {
             constructor() {
                 this.audioPlayer = document.getElementById('audio-player');
                 this.playButton = document.getElementById('play-button');
                 this.nextButton = document.getElementById('next-button');
+                this.artistControllerToggle = document.getElementById('artist-controller-toggle');
+                this.artistController = document.getElementById('artist-controller');
+                this.artistList = document.getElementById('artist-list');
+                this.selectAllBtn = document.getElementById('select-all-btn');
+                this.selectNoneBtn = document.getElementById('select-none-btn');
+                this.enabledCount = document.getElementById('enabled-count');
                 this.coverImage = document.getElementById('cover-image');
                 this.trackTitle = document.getElementById('track-title');
                 this.trackArtist = document.getElementById('track-artist');
@@ -301,9 +428,13 @@
                 this.themeToggle = document.getElementById('theme-toggle');
                 
                 this.tracks = [];
+                this.enabledTracks = []; // Shuffled list of enabled tracks only
+                this.allArtists = new Map(); // Map of artist name -> track count
+                this.enabledArtists = new Set();
                 this.currentTrackIndex = 0;
                 this.isPlaying = false;
                 this.hasUserInteracted = false;
+                this.artistControllerVisible = false;
                 
                 this.init();
                 
@@ -320,6 +451,7 @@
             async init() {
                 this.setupEventListeners();
                 await this.loadTrackData();
+                this.setupArtistController();
                 this.loadTrack(0);
                 this.loadSavedSettings();
             }
@@ -338,11 +470,31 @@
                     document.body.classList.add('dark-mode');
                     this.themeToggle.textContent = 'Light Mode';
                 }
+                
+                // Load saved artist preferences
+                const savedArtists = localStorage.getItem('jriRadioEnabledArtists');
+                if (savedArtists) {
+                    this.enabledArtists = new Set(JSON.parse(savedArtists));
+                    // Re-shuffle with new artist selection
+                    this.shuffleEnabledTracks();
+                } else {
+                    // Default: enable all artists
+                    this.enabledArtists = new Set(this.allArtists.keys());
+                }
+                
+                // Load artist controller visibility
+                const controllerVisible = localStorage.getItem('jriRadioArtistControllerVisible') === 'true';
+                if (controllerVisible) {
+                    this.toggleArtistController();
+                }
             }
             
             setupEventListeners() {
                 this.playButton.addEventListener('click', () => this.togglePlay());
                 this.nextButton.addEventListener('click', () => this.nextTrack());
+                this.artistControllerToggle.addEventListener('click', () => this.toggleArtistController());
+                this.selectAllBtn.addEventListener('click', () => this.selectAllArtists());
+                this.selectNoneBtn.addEventListener('click', () => this.selectNoArtists());
                 this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
                 this.themeToggle.addEventListener('click', () => this.toggleTheme());
                 
@@ -394,8 +546,11 @@
                         return;
                     }
                     
-                    // Shuffle tracks for random playback
-                    this.shuffleTracks();
+                    // Extract all artists
+                    this.extractArtists();
+                    
+                    // Initial shuffle and filter
+                    this.shuffleEnabledTracks();
                     
                 } catch (error) {
                     console.error('Error loading track data:', error);
@@ -425,21 +580,167 @@
                 }
             }
             
-            shuffleTracks() {
-                for (let i = this.tracks.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.tracks[i], this.tracks[j]] = [this.tracks[j], this.tracks[i]];
+            extractArtists() {
+                this.allArtists.clear();
+                
+                // Count tracks per artist
+                for (const track of this.tracks) {
+                    const count = this.allArtists.get(track.artist) || 0;
+                    this.allArtists.set(track.artist, count + 1);
+                }
+                
+                // Sort artists alphabetically
+                this.allArtists = new Map([...this.allArtists.entries()].sort());
+            }
+            
+            setupArtistController() {
+                this.artistList.innerHTML = '';
+                
+                for (const [artist, count] of this.allArtists) {
+                    const artistItem = document.createElement('div');
+                    artistItem.className = 'artist-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `artist-${artist.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    checkbox.checked = this.enabledArtists.has(artist);
+                    checkbox.addEventListener('change', () => this.toggleArtist(artist, checkbox.checked));
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.textContent = artist;
+                    
+                    const trackCount = document.createElement('span');
+                    trackCount.className = 'artist-track-count';
+                    trackCount.textContent = `(${count})`;
+                    
+                    artistItem.appendChild(checkbox);
+                    artistItem.appendChild(label);
+                    artistItem.appendChild(trackCount);
+                    this.artistList.appendChild(artistItem);
+                }
+                
+                this.updateEnabledCount();
+            }
+            
+            toggleArtist(artist, enabled) {
+                if (enabled) {
+                    this.enabledArtists.add(artist);
+                } else {
+                    this.enabledArtists.delete(artist);
+                }
+                
+                // Ensure at least one artist remains enabled
+                if (this.enabledArtists.size === 0) {
+                    this.enabledArtists.add(artist);
+                    // Re-check the checkbox
+                    const checkbox = document.getElementById(`artist-${artist.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                    if (checkbox) checkbox.checked = true;
+                }
+                
+                this.saveArtistPreferences();
+                this.updateEnabledCount();
+                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+            }
+            
+            selectAllArtists() {
+                this.enabledArtists = new Set(this.allArtists.keys());
+                this.updateArtistCheckboxes();
+                this.saveArtistPreferences();
+                this.updateEnabledCount();
+                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+            }
+            
+            selectNoArtists() {
+                // Keep only the first artist enabled to ensure at least one remains
+                const firstArtist = this.allArtists.keys().next().value;
+                this.enabledArtists = new Set([firstArtist]);
+                this.updateArtistCheckboxes();
+                this.saveArtistPreferences();
+                this.updateEnabledCount();
+                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+            }
+            
+            updateArtistCheckboxes() {
+                for (const [artist] of this.allArtists) {
+                    const checkbox = document.getElementById(`artist-${artist.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                    if (checkbox) {
+                        checkbox.checked = this.enabledArtists.has(artist);
+                    }
                 }
             }
             
+            updateEnabledCount() {
+                const enabledCount = this.enabledArtists.size;
+                const totalCount = this.allArtists.size;
+                
+                if (enabledCount === totalCount) {
+                    this.enabledCount.textContent = 'All artists enabled';
+                } else {
+                    this.enabledCount.textContent = `${enabledCount}/${totalCount} artists enabled`;
+                }
+            }
+            
+            saveArtistPreferences() {
+                localStorage.setItem('jriRadioEnabledArtists', JSON.stringify([...this.enabledArtists]));
+            }
+            
+            toggleArtistController() {
+                this.artistControllerVisible = !this.artistControllerVisible;
+                
+                if (this.artistControllerVisible) {
+                    this.artistController.classList.add('show');
+                    this.artistControllerToggle.textContent = 'Hide Filter';
+                } else {
+                    this.artistController.classList.remove('show');
+                    this.artistControllerToggle.textContent = 'Artist Filter';
+                }
+                
+                localStorage.setItem('jriRadioArtistControllerVisible', this.artistControllerVisible);
+            }
+            
+            shuffleEnabledTracks() {
+                // Filter tracks to only include enabled artists
+                this.enabledTracks = this.tracks.filter(track => 
+                    this.enabledArtists.has(track.artist)
+                );
+                
+                // Shuffle the enabled tracks
+                for (let i = this.enabledTracks.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.enabledTracks[i], this.enabledTracks[j]] = [this.enabledTracks[j], this.enabledTracks[i]];
+                }
+                
+                // Reset current track index
+                this.currentTrackIndex = 0;
+                
+                console.log(`Shuffled ${this.enabledTracks.length} enabled tracks`);
+            }
+            
+            shuffleTracks() {
+                // Legacy method - now just calls shuffleEnabledTracks
+                this.shuffleEnabledTracks();
+            }
+            
             loadTrack(index) {
-                if (index >= this.tracks.length) {
-                    this.shuffleTracks();
+                // Ensure we have enabled tracks
+                if (this.enabledTracks.length === 0) {
+                    // Fallback: enable all artists and reshuffle
+                    this.enabledArtists = new Set(this.allArtists.keys());
+                    this.updateArtistCheckboxes();
+                    this.saveArtistPreferences();
+                    this.updateEnabledCount();
+                    this.shuffleEnabledTracks();
+                }
+                
+                // If we've reached the end of enabled tracks, reshuffle
+                if (index >= this.enabledTracks.length) {
+                    this.shuffleEnabledTracks();
                     index = 0;
                 }
                 
                 this.currentTrackIndex = index;
-                const track = this.tracks[index];
+                const track = this.enabledTracks[index];
                 
                 // Load audio file using GitHub raw URL
                 this.loadAudioFile(track);
@@ -557,8 +858,8 @@
             }
             
             updateDocumentTitle() {
-                if (this.tracks.length > 0) {
-                    const track = this.tracks[this.currentTrackIndex];
+                if (this.enabledTracks.length > 0) {
+                    const track = this.enabledTracks[this.currentTrackIndex];
                     const baseTitle = this.isPlaying ? 
                         ` ${track.title} - ${track.artist}` : 
                         ` ${track.title} - ${track.artist}`;
