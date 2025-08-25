@@ -140,20 +140,20 @@ create_radio_html() {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jri Radio</title>
+    <title>Dacota Radio</title>
     <style>
         :root {
-            --bg-color: #74b9ff;
+            --bg-color: #d63031;
             --container-bg: #fff;
             --text-color: #333;
             --secondary-text: #777;
             --light-text: #999;
-            --play-button-bg: #4CAF50;
-            --play-button-hover: #45a049;
-            --next-button-bg: #2196F3;
-            --next-button-hover: #0b7dda;
+            --play-button-bg: #e17055;
+            --play-button-hover: #d63031;
+            --next-button-bg: #fd79a8;
+            --next-button-hover: #e84393;
             --progress-bg: #ddd;
-            --progress-fill: #4CAF50;
+            --progress-fill: #e17055;
             --shadow-color: rgba(0, 0, 0, 0.1);
             --error-bg: #ffebee;
             --error-border: #f44336;
@@ -163,17 +163,17 @@ create_radio_html() {
         }
         
         body.dark-mode {
-            --bg-color: #003060;
+            --bg-color: #2d3436;
             --container-bg: #1e1e1e;
             --text-color: #e0e0e0;
             --secondary-text: #b0b0b0;
             --light-text: #909090;
-            --play-button-bg: #388e3c;
-            --play-button-hover: #2e7d32;
-            --next-button-bg: #1976d2;
-            --next-button-hover: #1565c0;
+            --play-button-bg: #d63031;
+            --play-button-hover: #b2bec3;
+            --next-button-bg: #e17055;
+            --next-button-hover: #fab1a0;
             --progress-bg: #424242;
-            --progress-fill: #4CAF50;
+            --progress-fill: #e17055;
             --shadow-color: rgba(0, 0, 0, 0.3);
             --error-bg: #2d1b1b;
             --error-border: #d32f2f;
@@ -476,7 +476,7 @@ create_radio_html() {
 </head>
 <body>
     <div class="header">
-        <h1>Jri Radio</h1>
+        <h1>Dacota Radio</h1>
         <div class="header-controls">
             <button id="theme-toggle" class="theme-toggle">Dark Mode</button>
         </div>
@@ -539,8 +539,8 @@ create_radio_html() {
     </div>
 
     <script>
-        // GitHub Pages optimized version of Jri Radio with Artist Controller
-        class JriRadioPlayer {
+        // GitHub Pages optimized version of Dacota Radio with Artist Controller
+        class DacotaRadioPlayer {
             constructor() {
                 this.audioPlayer = document.getElementById('audio-player');
                 this.playButton = document.getElementById('play-button');
@@ -595,21 +595,21 @@ create_radio_html() {
             
             loadSavedSettings() {
                 // Load saved volume
-                const savedVolume = localStorage.getItem('jriRadioVolume');
+                const savedVolume = localStorage.getItem('dacotaRadioVolume');
                 if (savedVolume) {
                     this.volumeSlider.value = savedVolume;
                     this.audioPlayer.volume = savedVolume;
                 }
                 
                 // Load saved theme
-                const isDarkMode = localStorage.getItem('jriRadioDarkMode') === 'true';
+                const isDarkMode = localStorage.getItem('dacotaRadioDarkMode') === 'true';
                 if (isDarkMode) {
                     document.body.classList.add('dark-mode');
                     this.themeToggle.textContent = 'Light Mode';
                 }
                 
                 // Load saved artist preferences
-                const savedArtists = localStorage.getItem('jriRadioEnabledArtists');
+                const savedArtists = localStorage.getItem('dacotaRadioEnabledArtists');
                 if (savedArtists) {
                     this.enabledArtists = new Set(JSON.parse(savedArtists));
                     // Re-shuffle with new artist selection
@@ -620,7 +620,7 @@ create_radio_html() {
                 }
                 
                 // Load artist controller visibility
-                const controllerVisible = localStorage.getItem('jriRadioArtistControllerVisible') === 'true';
+                const controllerVisible = localStorage.getItem('dacotaRadioArtistControllerVisible') === 'true';
                 if (controllerVisible) {
                     this.toggleArtistController();
                 }
@@ -819,7 +819,7 @@ create_radio_html() {
             }
             
             saveArtistPreferences() {
-                localStorage.setItem('jriRadioEnabledArtists', JSON.stringify([...this.enabledArtists]));
+                localStorage.setItem('dacotaRadioEnabledArtists', JSON.stringify([...this.enabledArtists]));
             }
             
             toggleArtistController() {
@@ -833,7 +833,7 @@ create_radio_html() {
                     this.artistControllerToggle.textContent = 'Artist Filter';
                 }
                 
-                localStorage.setItem('jriRadioArtistControllerVisible', this.artistControllerVisible);
+                localStorage.setItem('dacotaRadioArtistControllerVisible', this.artistControllerVisible);
             }
             
             shuffleEnabledTracks() {
@@ -961,7 +961,7 @@ create_radio_html() {
             
             setVolume(volume) {
                 this.audioPlayer.volume = volume;
-                localStorage.setItem('jriRadioVolume', volume);
+                localStorage.setItem('dacotaRadioVolume', volume);
             }
             
             updateProgress() {
@@ -1002,7 +1002,7 @@ create_radio_html() {
                         ` ${track.title} - ${track.artist}`;
                     document.title = baseTitle;
                 } else {
-                    document.title = 'Jri Radio';
+                    document.title = 'Dacota Radio';
                 }
             }
             
@@ -1010,13 +1010,13 @@ create_radio_html() {
                 document.body.classList.toggle('dark-mode');
                 const isDark = document.body.classList.contains('dark-mode');
                 this.themeToggle.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-                localStorage.setItem('jriRadioDarkMode', isDark);
+                localStorage.setItem('dacotaRadioDarkMode', isDark);
             }
         }
         
         // Initialize player when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            new JriRadioPlayer();
+            new DacotaRadioPlayer();
         });
     </script>
 </body>
@@ -2335,6 +2335,11 @@ main() {
         echo ""
         echo "🎉 SUCCESS! Jri Radio GitHub Pages site has been updated!"
         echo "============================================================"
+        echo "🗂️ BUILD - CHICAGO - First Dacota Build: August 25 2025 (Jri Build: August 23, 2025)"
+        echo "============================================================"
+        echo "ℹ️ INFO:"
+        echo "BETA: Repeat & Shuffle"
+        echo "============================================================"
         echo "📊 Total files processed: $(cat $FILECOUNT_FILE)"
         echo "📅 Last update: $(cat $DATE_FILE)"
         echo "📁 Site files created in: $SITE_DIR/"
@@ -2342,7 +2347,7 @@ main() {
         echo "Next steps:"
         echo "Only do this if you haven't done it already!"
         echo "1. Enable GitHub Pages in your repository settings"
-        echo "2. Set source to 'Deploy from a branch' and select 'main' (or 'master') branch, /site folder"
+        echo "2. Set source to 'Deploy from a branch' and select 'main' (or 'master') branch, site/ folder"
         echo "3. Your Jri Radio site will be available at your GitHub Pages URL"
         echo ""
         echo "Note: .jlres3 files are loaded directly from the repository using GitHub's raw content URLs"
