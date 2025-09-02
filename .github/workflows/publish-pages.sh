@@ -143,10 +143,10 @@ create_radio_html() {
     <title>Dacota Radio</title>
     <style>
 :root {
-    --bg-color: linear-gradient(45deg, #ffeb3b, #2d3436);
+    --bg-color: linear-gradient(45deg, #ffeb3b, #b2bec3);
     --container-bg: #fff;
-    --text-color: #ffeb3b;
-    --secondary-text: #ffeb3b;
+    --text-color: #333;
+    --secondary-text: #777;
     --light-text: #999;
     --play-button-bg: #ffeb3b;
     --play-button-hover: #ffd54f;
@@ -170,9 +170,9 @@ body.dark-mode {
     --secondary-text: #b0b0b0;
     --light-text: #909090;
     --play-button-bg: #2d3436;
-    --play-button-hover: #b2bec3;
+    --play-button-hover: #1e1e1e;
     --next-button-bg: #2d3436;
-    --next-button-hover: #404040;
+    --next-button-hover: #1e1e1e;
     --progress-bg: #424242;
     --progress-fill: #ffeb3b;
     --shadow-color: rgba(0, 0, 0, 0.3);
@@ -191,7 +191,9 @@ body {
     padding: 20px;
     background: var(--bg-color);
     color: var(--text-color);
+    min-height: 100vh;
     transition: background-color 0.3s, color 0.3s;
+    background-attachment: fixed;
 }
 
 .player-container {
