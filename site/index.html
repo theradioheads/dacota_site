@@ -115,7 +115,7 @@ body {
     flex-wrap: wrap;
 }
 
-.play-button, .next-button, .prev-button, .artist-controller-toggle, .smart-reverse-button {
+.play-button, .next-button, .artist-controller-toggle, .smart-reverse-button {
     color: var(--button-text);
     border: none;
     padding: 10px 20px;
@@ -131,7 +131,7 @@ body {
     min-width: 100px;
 }
 
-.next-button, .prev-button, .artist-controller-toggle, .smart-reverse-button {
+.next-button, .artist-controller-toggle, .smart-reverse-button {
     background-color: var(--next-button-bg);
 }
 
@@ -139,7 +139,7 @@ body {
     background-color: var(--play-button-hover);
 }
 
-.next-button:hover, .prev-button:hover, .artist-controller-toggle:hover, .smart-reverse-button:hover {
+.next-button:hover, .artist-controller-toggle:hover, .smart-reverse-button:hover {
     background-color: var(--next-button-hover);
 }
 
@@ -408,10 +408,9 @@ body.dark-mode .artist-item:hover {
             </div>
             
             <div class="controls">
-                <button class="prev-button" id="prev-button">← Previous</button>
                 <button class="play-button" id="play-button">Play</button>
                 <button class="next-button" id="next-button">Next Track →</button>
-                <button class="smart-reverse-button" id="smart-reverse-button" title="Undo up to 5 skips" disabled>↶ Undo Skip</button>
+                <button class="smart-reverse-button" id="smart-reverse-button" title="Undo last skip" disabled>↶ Undo Skip</button>
                 <button class="artist-controller-toggle" id="artist-controller-toggle">Artist Filter</button>
                 <div class="volume-control">
                     <label for="volume-slider" style="margin-right: 5px;">🔊</label>
@@ -430,7 +429,6 @@ body.dark-mode .artist-item:hover {
                 this.audioPlayer = document.getElementById('audio-player');
                 this.playButton = document.getElementById('play-button');
                 this.nextButton = document.getElementById('next-button');
-                this.prevButton = document.getElementById('prev-button');
                 this.smartReverseButton = document.getElementById('smart-reverse-button');
                 this.artistControllerToggle = document.getElementById('artist-controller-toggle');
                 this.artistController = document.getElementById('artist-controller');
@@ -463,12 +461,16 @@ body.dark-mode .artist-item:hover {
                 
                 // Smart Reverse tracking
                 this.skipHistory = [];
-                this.maxHistorySize = 5;
+                this.maxHistorySize = 1;
                 
                 // Scrolling title
                 this.scrollTitleInterval = null;
                 this.originalTitle = 'Dacota Radio';
                 this.scrollingTitleText = '';
+                this.scrollIndex = 0;
+                
+                // Auto-play tracking
+                this.shouldAutoPlay = false;
                 
                 this.init();
                 
@@ -527,12 +529,14 @@ body.dark-mode .artist-item:hover {
                     this.skipHistory = JSON.parse(savedHistory);
                     this.updateSmartReverseButton();
                 }
+                
+                // Load auto-play preference
+                this.shouldAutoPlay = localStorage.getItem('dacotaRadioAutoPlay') !== 'false';
             }
             
             setupEventListeners() {
                 this.playButton.addEventListener('click', () => this.togglePlay());
                 this.nextButton.addEventListener('click', () => this.nextTrack());
-                this.prevButton.addEventListener('click', () => this.previousTrack());
                 this.smartReverseButton.addEventListener('click', () => this.smartReverse());
                 this.artistControllerToggle.addEventListener('click', () => this.toggleArtistController());
                 this.selectAllBtn.addEventListener('click', () => this.selectAllArtists());
@@ -547,16 +551,33 @@ body.dark-mode .artist-item:hover {
                 this.audioPlayer.addEventListener('error', (e) => this.handleAudioError(e));
                 this.audioPlayer.addEventListener('play', () => this.onAudioPlay());
                 this.audioPlayer.addEventListener('pause', () => this.onAudioPause());
+                this.audioPlayer.addEventListener('loadstart', () => this.onLoadStart());
                 
                 this.progressContainer.addEventListener('click', (e) => this.seek(e));
             }
             
             setupMediaSession() {
                 if ('mediaSession' in navigator) {
-                    navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
-                    navigator.mediaSession.setActionHandler('pause', () => this.togglePlay());
-                    navigator.mediaSession.setActionHandler('nexttrack', () => this.nextTrack());
-                    navigator.mediaSession.setActionHandler('previoustrack', () => this.previousTrack());
+                    navigator.mediaSession.setActionHandler('play', () => {
+                        this.audioPlayer.play().catch(e => console.log('Play failed:', e));
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('pause', () => {
+                        this.audioPlayer.pause();
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('nexttrack', () => {
+                        this.nextTrack();
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('previoustrack', () => {
+                        // On previous, undo skip if available, otherwise play from start
+                        if (this.skipHistory.length > 0) {
+                            this.smartReverse();
+                        } else {
+                            this.audioPlayer.currentTime = 0;
+                        }
+                    });
                     
                     // Handle seek actions
                     navigator.mediaSession.setActionHandler('seekbackward', (event) => {
@@ -576,15 +597,27 @@ body.dark-mode .artist-item:hover {
                     const track = this.enabledTracks[this.currentTrackIndex];
                     const artwork = track.image ? [{ src: track.image, sizes: '512x512', type: 'image/jpeg' }] : [];
                     
-                    navigator.mediaSession.metadata = new MediaMetadata({
-                        title: track.title,
-                        artist: track.artist,
-                        album: 'Dacota Radio',
-                        artwork: artwork
-                    });
+                    try {
+                        navigator.mediaSession.metadata = new MediaMetadata({
+                            title: track.title,
+                            artist: track.artist,
+                            album: 'Dacota Radio',
+                            artwork: artwork
+                        });
+                    } catch (e) {
+                        console.log('Could not update media session:', e);
+                    }
                     
-                    navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+                    try {
+                        navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+                    } catch (e) {
+                        console.log('Could not update playback state:', e);
+                    }
                 }
+            }
+            
+            onLoadStart() {
+                console.log('Audio load started');
             }
             
             onAudioPlay() {
@@ -602,8 +635,13 @@ body.dark-mode .artist-item:hover {
             }
             
             handleCanPlay() {
-                if (this.hasUserInteracted && this.currentTrackIndex === 0 && !this.isPlaying) {
-                    this.togglePlay();
+                console.log('Audio can play now, isPlaying:', this.isPlaying, 'shouldAutoPlay:', this.shouldAutoPlay, 'hasUserInteracted:', this.hasUserInteracted);
+                
+                // Auto-play logic: play if should auto-play and user has interacted
+                if (this.shouldAutoPlay && this.hasUserInteracted && !this.isPlaying) {
+                    this.audioPlayer.play().catch(e => {
+                        console.log('Auto-play failed:', e);
+                    });
                 }
             }
             
@@ -825,13 +863,16 @@ body.dark-mode .artist-item:hover {
                     this.coverImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
                 }
                 
+                // Update scrolling title text and reset scroll position
+                this.scrollingTitleText = `${track.title} - ${track.artist}`;
+                this.scrollIndex = 0;
+                
                 this.updateDocumentTitle();
                 this.updateMediaSessionMetadata();
                 
                 // Restart scrolling title if currently playing
                 if (this.isPlaying) {
-                    this.stopScrollingTitle();
-                    this.startScrollingTitle();
+                    this.restartScrollingTitle();
                 }
                 
                 this.showPlayer();
@@ -901,26 +942,6 @@ body.dark-mode .artist-item:hover {
                 }
             }
             
-            previousTrack() {
-                // Stop scrolling before changing track
-                this.stopScrollingTitle();
-                
-                // Store current track index in history before moving
-                this.skipHistory.push(this.currentTrackIndex);
-                if (this.skipHistory.length > this.maxHistorySize) {
-                    this.skipHistory.shift();
-                }
-                this.saveSkipHistory();
-                this.updateSmartReverseButton();
-                
-                this.loadTrack(this.currentTrackIndex - 1);
-                if (this.isPlaying && this.hasUserInteracted) {
-                    setTimeout(() => {
-                        this.audioPlayer.play().catch(e => console.log('Auto-play failed:', e));
-                    }, 100);
-                }
-            }
-            
             smartReverse() {
                 // Stop scrolling before changing track
                 this.stopScrollingTitle();
@@ -949,7 +970,7 @@ body.dark-mode .artist-item:hover {
             updateSmartReverseButton() {
                 if (this.skipHistory.length > 0) {
                     this.smartReverseButton.disabled = false;
-                    this.smartReverseButton.title = `Undo ${this.skipHistory.length} skip(s)`;
+                    this.smartReverseButton.title = 'Undo last skip';
                 } else {
                     this.smartReverseButton.disabled = true;
                     this.smartReverseButton.title = 'No skips to undo';
@@ -992,20 +1013,13 @@ body.dark-mode .artist-item:hover {
             }
             
             startScrollingTitle() {
-                // Always stop existing interval first
                 if (this.scrollTitleInterval) {
-                    clearInterval(this.scrollTitleInterval);
-                    this.scrollTitleInterval = null;
+                    return; // Already scrolling
                 }
                 
-                if (!this.isPlaying) return;
-                
-                const currentTrack = this.enabledTracks[this.currentTrackIndex];
-                if (!currentTrack) return;
-                
-                // Store the text to scroll
-                this.scrollingTitleText = `${currentTrack.title} - ${currentTrack.artist}`;
-                let index = 0;
+                if (!this.isPlaying || !this.scrollingTitleText) {
+                    return;
+                }
                 
                 // Set initial title
                 document.title = this.scrollingTitleText;
@@ -1018,15 +1032,21 @@ body.dark-mode .artist-item:hover {
                         return;
                     }
                     
-                    index = (index + 1) % this.scrollingTitleText.length;
-                    document.title = this.scrollingTitleText.substring(index) + ' ♪ ' + this.scrollingTitleText.substring(0, index);
+                    this.scrollIndex = (this.scrollIndex + 1) % this.scrollingTitleText.length;
+                    document.title = this.scrollingTitleText.substring(this.scrollIndex) + ' ♪ ' + this.scrollingTitleText.substring(0, this.scrollIndex);
                 }, 150);
+            }
+            
+            restartScrollingTitle() {
+                this.stopScrollingTitle();
+                this.startScrollingTitle();
             }
             
             stopScrollingTitle() {
                 if (this.scrollTitleInterval) {
                     clearInterval(this.scrollTitleInterval);
                     this.scrollTitleInterval = null;
+                    this.scrollIndex = 0;
                 }
                 this.updateDocumentTitle();
             }
