@@ -326,21 +326,6 @@ body.dark-mode .artist-item:hover {
     margin-left: 5px;
 }
 
-.scrolling-title {
-    display: inline-block;
-    padding-left: 30px;
-    animation: scroll-title 15s linear infinite;
-}
-
-@keyframes scroll-title {
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(-100%);
-    }
-}
-
 #audio-player {
     display: none;
 }
@@ -483,6 +468,7 @@ body.dark-mode .artist-item:hover {
                 // Scrolling title
                 this.scrollTitleInterval = null;
                 this.originalTitle = 'Dacota Radio';
+                this.scrollingTitleText = '';
                 
                 this.init();
                 
@@ -841,6 +827,13 @@ body.dark-mode .artist-item:hover {
                 
                 this.updateDocumentTitle();
                 this.updateMediaSessionMetadata();
+                
+                // Restart scrolling title if currently playing
+                if (this.isPlaying) {
+                    this.stopScrollingTitle();
+                    this.startScrollingTitle();
+                }
+                
                 this.showPlayer();
             }
             
@@ -889,6 +882,9 @@ body.dark-mode .artist-item:hover {
             }
             
             nextTrack() {
+                // Stop scrolling before changing track
+                this.stopScrollingTitle();
+                
                 // Store current track index in history before moving
                 this.skipHistory.push(this.currentTrackIndex);
                 if (this.skipHistory.length > this.maxHistorySize) {
@@ -906,6 +902,9 @@ body.dark-mode .artist-item:hover {
             }
             
             previousTrack() {
+                // Stop scrolling before changing track
+                this.stopScrollingTitle();
+                
                 // Store current track index in history before moving
                 this.skipHistory.push(this.currentTrackIndex);
                 if (this.skipHistory.length > this.maxHistorySize) {
@@ -923,6 +922,9 @@ body.dark-mode .artist-item:hover {
             }
             
             smartReverse() {
+                // Stop scrolling before changing track
+                this.stopScrollingTitle();
+                
                 if (this.skipHistory.length === 0) {
                     console.log('No skip history available');
                     return;
@@ -990,15 +992,34 @@ body.dark-mode .artist-item:hover {
             }
             
             startScrollingTitle() {
-                if (this.scrollTitleInterval) return;
+                // Always stop existing interval first
+                if (this.scrollTitleInterval) {
+                    clearInterval(this.scrollTitleInterval);
+                    this.scrollTitleInterval = null;
+                }
                 
-                let currentTrack = this.enabledTracks[this.currentTrackIndex];
-                let text = `${currentTrack.title} - ${currentTrack.artist}`;
+                if (!this.isPlaying) return;
+                
+                const currentTrack = this.enabledTracks[this.currentTrackIndex];
+                if (!currentTrack) return;
+                
+                // Store the text to scroll
+                this.scrollingTitleText = `${currentTrack.title} - ${currentTrack.artist}`;
                 let index = 0;
                 
+                // Set initial title
+                document.title = this.scrollingTitleText;
+                
+                // Start scrolling animation
                 this.scrollTitleInterval = setInterval(() => {
-                    document.title = text.substring(index) + ' ♪ ' + text.substring(0, index);
-                    index = (index + 1) % text.length;
+                    if (!this.isPlaying) {
+                        clearInterval(this.scrollTitleInterval);
+                        this.scrollTitleInterval = null;
+                        return;
+                    }
+                    
+                    index = (index + 1) % this.scrollingTitleText.length;
+                    document.title = this.scrollingTitleText.substring(index) + ' ♪ ' + this.scrollingTitleText.substring(0, index);
                 }, 150);
             }
             
@@ -1006,8 +1027,8 @@ body.dark-mode .artist-item:hover {
                 if (this.scrollTitleInterval) {
                     clearInterval(this.scrollTitleInterval);
                     this.scrollTitleInterval = null;
-                    this.updateDocumentTitle();
                 }
+                this.updateDocumentTitle();
             }
             
             updateDocumentTitle() {
