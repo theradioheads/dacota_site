@@ -112,9 +112,10 @@ body {
     align-items: center;
     margin-bottom: 20px;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
-.play-button, .next-button, .artist-controller-toggle {
+.play-button, .next-button, .prev-button, .artist-controller-toggle, .smart-reverse-button {
     color: var(--button-text);
     border: none;
     padding: 10px 20px;
@@ -130,7 +131,7 @@ body {
     min-width: 100px;
 }
 
-.next-button, .artist-controller-toggle {
+.next-button, .prev-button, .artist-controller-toggle, .smart-reverse-button {
     background-color: var(--next-button-bg);
 }
 
@@ -138,8 +139,13 @@ body {
     background-color: var(--play-button-hover);
 }
 
-.next-button:hover, .artist-controller-toggle:hover {
+.next-button:hover, .prev-button:hover, .artist-controller-toggle:hover, .smart-reverse-button:hover {
     background-color: var(--next-button-hover);
+}
+
+.smart-reverse-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .progress-container {
@@ -320,6 +326,21 @@ body.dark-mode .artist-item:hover {
     margin-left: 5px;
 }
 
+.scrolling-title {
+    display: inline-block;
+    padding-left: 30px;
+    animation: scroll-title 15s linear infinite;
+}
+
+@keyframes scroll-title {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
 #audio-player {
     display: none;
 }
@@ -338,13 +359,21 @@ body.dark-mode .artist-item:hover {
     .artist-list {
         grid-template-columns: 1fr;
     }
+
+    .controls {
+        flex-direction: column;
+    }
+
+    .controls button {
+        width: 100%;
+    }
 }
 
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Dacota Radio</h1>
+        <h1 id="page-title">Dacota Radio</h1>
         <div class="header-controls">
             <button id="theme-toggle" class="theme-toggle">Dark Mode</button>
         </div>
@@ -394,10 +423,13 @@ body.dark-mode .artist-item:hover {
             </div>
             
             <div class="controls">
+                <button class="prev-button" id="prev-button">← Previous</button>
                 <button class="play-button" id="play-button">Play</button>
-                <button class="next-button" id="next-button">Next Track</button>
+                <button class="next-button" id="next-button">Next Track →</button>
+                <button class="smart-reverse-button" id="smart-reverse-button" title="Undo up to 5 skips" disabled>↶ Undo Skip</button>
                 <button class="artist-controller-toggle" id="artist-controller-toggle">Artist Filter</button>
                 <div class="volume-control">
+                    <label for="volume-slider" style="margin-right: 5px;">🔊</label>
                     <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
                 </div>
             </div>
@@ -407,12 +439,14 @@ body.dark-mode .artist-item:hover {
     </div>
 
     <script>
-        // GitHub Pages optimized version of Dacota Radio with Artist Controller
+        // GitHub Pages optimized version of Dacota Radio with Media Session API, Smart Reverse, and Scrolling Title
         class DacotaRadioPlayer {
             constructor() {
                 this.audioPlayer = document.getElementById('audio-player');
                 this.playButton = document.getElementById('play-button');
                 this.nextButton = document.getElementById('next-button');
+                this.prevButton = document.getElementById('prev-button');
+                this.smartReverseButton = document.getElementById('smart-reverse-button');
                 this.artistControllerToggle = document.getElementById('artist-controller-toggle');
                 this.artistController = document.getElementById('artist-controller');
                 this.artistList = document.getElementById('artist-list');
@@ -431,15 +465,24 @@ body.dark-mode .artist-item:hover {
                 this.errorDisplay = document.getElementById('error-display');
                 this.volumeSlider = document.getElementById('volume-slider');
                 this.themeToggle = document.getElementById('theme-toggle');
+                this.pageTitle = document.getElementById('page-title');
                 
                 this.tracks = [];
-                this.enabledTracks = []; // Shuffled list of enabled tracks only
-                this.allArtists = new Map(); // Map of artist name -> track count
+                this.enabledTracks = [];
+                this.allArtists = new Map();
                 this.enabledArtists = new Set();
                 this.currentTrackIndex = 0;
                 this.isPlaying = false;
                 this.hasUserInteracted = false;
                 this.artistControllerVisible = false;
+                
+                // Smart Reverse tracking
+                this.skipHistory = [];
+                this.maxHistorySize = 5;
+                
+                // Scrolling title
+                this.scrollTitleInterval = null;
+                this.originalTitle = 'Dacota Radio';
                 
                 this.init();
                 
@@ -457,6 +500,7 @@ body.dark-mode .artist-item:hover {
                 this.setupEventListeners();
                 await this.loadTrackData();
                 this.setupArtistController();
+                this.setupMediaSession();
                 this.loadTrack(0);
                 this.loadSavedSettings();
             }
@@ -480,10 +524,8 @@ body.dark-mode .artist-item:hover {
                 const savedArtists = localStorage.getItem('dacotaRadioEnabledArtists');
                 if (savedArtists) {
                     this.enabledArtists = new Set(JSON.parse(savedArtists));
-                    // Re-shuffle with new artist selection
                     this.shuffleEnabledTracks();
                 } else {
-                    // Default: enable all artists
                     this.enabledArtists = new Set(this.allArtists.keys());
                 }
                 
@@ -492,11 +534,20 @@ body.dark-mode .artist-item:hover {
                 if (controllerVisible) {
                     this.toggleArtistController();
                 }
+                
+                // Load skip history
+                const savedHistory = localStorage.getItem('dacotaRadioSkipHistory');
+                if (savedHistory) {
+                    this.skipHistory = JSON.parse(savedHistory);
+                    this.updateSmartReverseButton();
+                }
             }
             
             setupEventListeners() {
                 this.playButton.addEventListener('click', () => this.togglePlay());
                 this.nextButton.addEventListener('click', () => this.nextTrack());
+                this.prevButton.addEventListener('click', () => this.previousTrack());
+                this.smartReverseButton.addEventListener('click', () => this.smartReverse());
                 this.artistControllerToggle.addEventListener('click', () => this.toggleArtistController());
                 this.selectAllBtn.addEventListener('click', () => this.selectAllArtists());
                 this.selectNoneBtn.addEventListener('click', () => this.selectNoArtists());
@@ -508,12 +559,63 @@ body.dark-mode .artist-item:hover {
                 this.audioPlayer.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
                 this.audioPlayer.addEventListener('canplay', () => this.handleCanPlay());
                 this.audioPlayer.addEventListener('error', (e) => this.handleAudioError(e));
+                this.audioPlayer.addEventListener('play', () => this.onAudioPlay());
+                this.audioPlayer.addEventListener('pause', () => this.onAudioPause());
                 
                 this.progressContainer.addEventListener('click', (e) => this.seek(e));
             }
             
+            setupMediaSession() {
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
+                    navigator.mediaSession.setActionHandler('pause', () => this.togglePlay());
+                    navigator.mediaSession.setActionHandler('nexttrack', () => this.nextTrack());
+                    navigator.mediaSession.setActionHandler('previoustrack', () => this.previousTrack());
+                    
+                    // Handle seek actions
+                    navigator.mediaSession.setActionHandler('seekbackward', (event) => {
+                        const skipTime = event.seekOffset || 10;
+                        this.audioPlayer.currentTime = Math.max(0, this.audioPlayer.currentTime - skipTime);
+                    });
+                    
+                    navigator.mediaSession.setActionHandler('seekforward', (event) => {
+                        const skipTime = event.seekOffset || 10;
+                        this.audioPlayer.currentTime = Math.min(this.audioPlayer.duration, this.audioPlayer.currentTime + skipTime);
+                    });
+                }
+            }
+            
+            updateMediaSessionMetadata() {
+                if ('mediaSession' in navigator && this.enabledTracks.length > 0) {
+                    const track = this.enabledTracks[this.currentTrackIndex];
+                    const artwork = track.image ? [{ src: track.image, sizes: '512x512', type: 'image/jpeg' }] : [];
+                    
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: track.title,
+                        artist: track.artist,
+                        album: 'Dacota Radio',
+                        artwork: artwork
+                    });
+                    
+                    navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+                }
+            }
+            
+            onAudioPlay() {
+                this.isPlaying = true;
+                this.playButton.textContent = 'Pause';
+                this.updateMediaSessionMetadata();
+                this.startScrollingTitle();
+            }
+            
+            onAudioPause() {
+                this.isPlaying = false;
+                this.playButton.textContent = 'Play';
+                this.updateMediaSessionMetadata();
+                this.stopScrollingTitle();
+            }
+            
             handleCanPlay() {
-                // Auto-start playback if user has interacted and this is the first track
                 if (this.hasUserInteracted && this.currentTrackIndex === 0 && !this.isPlaying) {
                     this.togglePlay();
                 }
@@ -522,13 +624,11 @@ body.dark-mode .artist-item:hover {
             handleAudioError(e) {
                 console.error('Audio error:', e);
                 console.log('Error details:', this.audioPlayer.error);
-                // Try next track on error
                 setTimeout(() => this.nextTrack(), 1000);
             }
             
             async loadTrackData() {
                 try {
-                    // Load file count
                     const countResponse = await fetch('./filecount.txt');
                     if (!countResponse.ok) throw new Error('Could not load file count');
                     const fileCount = parseInt(await countResponse.text());
@@ -538,12 +638,10 @@ body.dark-mode .artist-item:hover {
                         return;
                     }
                     
-                    // Load file data
                     const dataResponse = await fetch('./filedata.txt');
                     if (!dataResponse.ok) throw new Error('Could not load file data');
                     const fileData = await dataResponse.text();
                     
-                    // Parse file data
                     this.parseTrackData(fileData);
                     
                     if (this.tracks.length === 0) {
@@ -551,10 +649,7 @@ body.dark-mode .artist-item:hover {
                         return;
                     }
                     
-                    // Extract all artists
                     this.extractArtists();
-                    
-                    // Initial shuffle and filter
                     this.shuffleEnabledTracks();
                     
                 } catch (error) {
@@ -564,13 +659,12 @@ body.dark-mode .artist-item:hover {
             }
             
             parseTrackData(data) {
-                // Parse format: (filename=title=artist=imgdata)
                 const lines = data.trim().split('\n');
                 this.tracks = [];
                 
                 for (const line of lines) {
                     if (line.startsWith('(') && line.endsWith(')')) {
-                        const content = line.slice(1, -1); // Remove parentheses
+                        const content = line.slice(1, -1);
                         const parts = content.split('=');
                         
                         if (parts.length >= 3) {
@@ -588,13 +682,11 @@ body.dark-mode .artist-item:hover {
             extractArtists() {
                 this.allArtists.clear();
                 
-                // Count tracks per artist
                 for (const track of this.tracks) {
                     const count = this.allArtists.get(track.artist) || 0;
                     this.allArtists.set(track.artist, count + 1);
                 }
                 
-                // Sort artists alphabetically
                 this.allArtists = new Map([...this.allArtists.entries()].sort());
             }
             
@@ -635,17 +727,15 @@ body.dark-mode .artist-item:hover {
                     this.enabledArtists.delete(artist);
                 }
                 
-                // Ensure at least one artist remains enabled
                 if (this.enabledArtists.size === 0) {
                     this.enabledArtists.add(artist);
-                    // Re-check the checkbox
                     const checkbox = document.getElementById(`artist-${artist.replace(/[^a-zA-Z0-9]/g, '_')}`);
                     if (checkbox) checkbox.checked = true;
                 }
                 
                 this.saveArtistPreferences();
                 this.updateEnabledCount();
-                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+                this.shuffleEnabledTracks();
             }
             
             selectAllArtists() {
@@ -653,17 +743,16 @@ body.dark-mode .artist-item:hover {
                 this.updateArtistCheckboxes();
                 this.saveArtistPreferences();
                 this.updateEnabledCount();
-                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+                this.shuffleEnabledTracks();
             }
             
             selectNoArtists() {
-                // Keep only the first artist enabled to ensure at least one remains
                 const firstArtist = this.allArtists.keys().next().value;
                 this.enabledArtists = new Set([firstArtist]);
                 this.updateArtistCheckboxes();
                 this.saveArtistPreferences();
                 this.updateEnabledCount();
-                this.shuffleEnabledTracks(); // Re-shuffle when artists change
+                this.shuffleEnabledTracks();
             }
             
             updateArtistCheckboxes() {
@@ -705,32 +794,21 @@ body.dark-mode .artist-item:hover {
             }
             
             shuffleEnabledTracks() {
-                // Filter tracks to only include enabled artists
                 this.enabledTracks = this.tracks.filter(track => 
                     this.enabledArtists.has(track.artist)
                 );
                 
-                // Shuffle the enabled tracks
                 for (let i = this.enabledTracks.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [this.enabledTracks[i], this.enabledTracks[j]] = [this.enabledTracks[j], this.enabledTracks[i]];
                 }
                 
-                // Reset current track index
                 this.currentTrackIndex = 0;
-                
                 console.log(`Shuffled ${this.enabledTracks.length} enabled tracks`);
             }
             
-            shuffleTracks() {
-                // Legacy method - now just calls shuffleEnabledTracks
-                this.shuffleEnabledTracks();
-            }
-            
             loadTrack(index) {
-                // Ensure we have enabled tracks
                 if (this.enabledTracks.length === 0) {
-                    // Fallback: enable all artists and reshuffle
                     this.enabledArtists = new Set(this.allArtists.keys());
                     this.updateArtistCheckboxes();
                     this.saveArtistPreferences();
@@ -738,16 +816,18 @@ body.dark-mode .artist-item:hover {
                     this.shuffleEnabledTracks();
                 }
                 
-                // If we've reached the end of enabled tracks, reshuffle
                 if (index >= this.enabledTracks.length) {
                     this.shuffleEnabledTracks();
                     index = 0;
                 }
                 
+                if (index < 0) {
+                    index = this.enabledTracks.length - 1;
+                }
+                
                 this.currentTrackIndex = index;
                 const track = this.enabledTracks[index];
                 
-                // Load audio file using GitHub raw URL
                 this.loadAudioFile(track);
                 
                 this.trackTitle.textContent = track.title;
@@ -760,16 +840,13 @@ body.dark-mode .artist-item:hover {
                 }
                 
                 this.updateDocumentTitle();
+                this.updateMediaSessionMetadata();
                 this.showPlayer();
             }
             
             async loadAudioFile(track) {
                 try {
                     console.log(`Loading audio file: ${track.filename}`);
-                    
-                    // Only use GitHub raw URL method
-                    const repoUrl = window.location.hostname.includes('github.io') ? 
-                        window.location.hostname.replace('.github.io', '') : 'Jri-creator/jri_site';
                     
                     this.audioPlayer.src = `https://raw.githubusercontent.com/theradioheads/dacota_site/refs/heads/main/${track.filename}`;
                     this.audioPlayer.load();
@@ -798,15 +875,10 @@ body.dark-mode .artist-item:hover {
             togglePlay() {
                 if (this.isPlaying) {
                     this.audioPlayer.pause();
-                    this.playButton.textContent = 'Play';
-                    this.isPlaying = false;
                 } else {
                     const playPromise = this.audioPlayer.play();
                     if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            this.playButton.textContent = 'Pause';
-                            this.isPlaying = true;
-                        }).catch(e => {
+                        playPromise.catch(e => {
                             console.log('Playback failed:', e);
                             if (!this.hasUserInteracted) {
                                 this.showError('Please click to start playback (browser autoplay policy)');
@@ -814,16 +886,71 @@ body.dark-mode .artist-item:hover {
                         });
                     }
                 }
-                this.updateDocumentTitle();
             }
             
             nextTrack() {
+                // Store current track index in history before moving
+                this.skipHistory.push(this.currentTrackIndex);
+                if (this.skipHistory.length > this.maxHistorySize) {
+                    this.skipHistory.shift();
+                }
+                this.saveSkipHistory();
+                this.updateSmartReverseButton();
+                
                 this.loadTrack(this.currentTrackIndex + 1);
                 if (this.isPlaying && this.hasUserInteracted) {
-                    // Delay to ensure new track is loaded
                     setTimeout(() => {
                         this.audioPlayer.play().catch(e => console.log('Auto-play failed:', e));
                     }, 100);
+                }
+            }
+            
+            previousTrack() {
+                // Store current track index in history before moving
+                this.skipHistory.push(this.currentTrackIndex);
+                if (this.skipHistory.length > this.maxHistorySize) {
+                    this.skipHistory.shift();
+                }
+                this.saveSkipHistory();
+                this.updateSmartReverseButton();
+                
+                this.loadTrack(this.currentTrackIndex - 1);
+                if (this.isPlaying && this.hasUserInteracted) {
+                    setTimeout(() => {
+                        this.audioPlayer.play().catch(e => console.log('Auto-play failed:', e));
+                    }, 100);
+                }
+            }
+            
+            smartReverse() {
+                if (this.skipHistory.length === 0) {
+                    console.log('No skip history available');
+                    return;
+                }
+                
+                const previousTrackIndex = this.skipHistory.pop();
+                this.saveSkipHistory();
+                this.updateSmartReverseButton();
+                
+                this.loadTrack(previousTrackIndex);
+                if (this.isPlaying && this.hasUserInteracted) {
+                    setTimeout(() => {
+                        this.audioPlayer.play().catch(e => console.log('Auto-play failed:', e));
+                    }, 100);
+                }
+            }
+            
+            saveSkipHistory() {
+                localStorage.setItem('dacotaRadioSkipHistory', JSON.stringify(this.skipHistory));
+            }
+            
+            updateSmartReverseButton() {
+                if (this.skipHistory.length > 0) {
+                    this.smartReverseButton.disabled = false;
+                    this.smartReverseButton.title = `Undo ${this.skipHistory.length} skip(s)`;
+                } else {
+                    this.smartReverseButton.disabled = true;
+                    this.smartReverseButton.title = 'No skips to undo';
                 }
             }
             
@@ -862,15 +989,33 @@ body.dark-mode .artist-item:hover {
                 }
             }
             
+            startScrollingTitle() {
+                if (this.scrollTitleInterval) return;
+                
+                let currentTrack = this.enabledTracks[this.currentTrackIndex];
+                let text = `${currentTrack.title} - ${currentTrack.artist}`;
+                let index = 0;
+                
+                this.scrollTitleInterval = setInterval(() => {
+                    document.title = text.substring(index) + ' ♪ ' + text.substring(0, index);
+                    index = (index + 1) % text.length;
+                }, 150);
+            }
+            
+            stopScrollingTitle() {
+                if (this.scrollTitleInterval) {
+                    clearInterval(this.scrollTitleInterval);
+                    this.scrollTitleInterval = null;
+                    this.updateDocumentTitle();
+                }
+            }
+            
             updateDocumentTitle() {
                 if (this.enabledTracks.length > 0) {
                     const track = this.enabledTracks[this.currentTrackIndex];
-                    const baseTitle = this.isPlaying ? 
-                        ` ${track.title} - ${track.artist}` : 
-                        ` ${track.title} - ${track.artist}`;
-                    document.title = baseTitle;
+                    document.title = `${track.title} - ${track.artist}`;
                 } else {
-                    document.title = 'Dacota Radio';
+                    document.title = this.originalTitle;
                 }
             }
             
@@ -882,7 +1027,6 @@ body.dark-mode .artist-item:hover {
             }
         }
         
-        // Initialize player when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             new DacotaRadioPlayer();
         });
